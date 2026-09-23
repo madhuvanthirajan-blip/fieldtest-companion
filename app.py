@@ -8,29 +8,35 @@ import streamlit as st
 from cv_engine import analyze_image
 from pdf_report import create_pdf_report
 
-# New GPS method
+
+# =========================================================
+# OPTIONAL GPS
+# =========================================================
+
 try:
     from streamlit_js_eval import get_geolocation
 except Exception:
     get_geolocation = None
 
 
-# ============================================================
-# PATHS
-# ============================================================
+# =========================================================
+# PROJECT PATHS
+# =========================================================
 
 APP_DIR = Path(__file__).resolve().parent
 
 DATA_DIR = APP_DIR / "data"
 IMAGE_DIR = DATA_DIR / "images"
+REPORT_DIR = DATA_DIR / "reports"
 HISTORY_FILE = DATA_DIR / "history.json"
 
 IMAGE_DIR.mkdir(parents=True, exist_ok=True)
+REPORT_DIR.mkdir(parents=True, exist_ok=True)
 
 
-# ============================================================
-# PAGE CONFIG
-# ============================================================
+# =========================================================
+# PAGE CONFIGURATION
+# =========================================================
 
 st.set_page_config(
     page_title="FieldTest Companion",
@@ -40,17 +46,17 @@ st.set_page_config(
 )
 
 
-# ============================================================
+# =========================================================
 # CUSTOM CSS
-# ============================================================
+# =========================================================
 
 st.markdown(
     """
     <style>
 
-    /* ======================================================
+    /* =====================================================
        MAIN APP
-       ====================================================== */
+       ===================================================== */
 
     .stApp {
         background-color: #07111f;
@@ -60,176 +66,296 @@ st.markdown(
     .block-container {
         max-width: 760px;
         padding-top: 1rem;
-        padding-bottom: 3rem;
+        padding-bottom: 4rem;
+        padding-left: 1rem;
+        padding-right: 1rem;
     }
 
 
-    /* ======================================================
+    /* =====================================================
        HEADINGS
-       ====================================================== */
+       ===================================================== */
 
     h1 {
-        color: #eef6ff !important;
+        color: #f4f8ff !important;
+        font-size: 2.2rem !important;
         font-weight: 800 !important;
+        letter-spacing: -0.5px;
     }
 
-    h2, h3 {
-        color: #eef6ff !important;
+    h2 {
+        color: #f4f8ff !important;
+        font-size: 1.65rem !important;
+        font-weight: 750 !important;
+        margin-top: 1.5rem !important;
+    }
+
+    h3 {
+        color: #f4f8ff !important;
+        font-weight: 700 !important;
     }
 
 
-    /* ======================================================
-       CAMERA AREA
-       ====================================================== */
+    /* =====================================================
+       NORMAL TEXT
+       ===================================================== */
+
+    .stMarkdown p {
+        color: #c8d6e5;
+    }
+
+    .stCaption {
+        color: #9fb2c5 !important;
+    }
+
+
+    /* =====================================================
+       INPUT FIELDS
+       ===================================================== */
+
+    input,
+    textarea {
+        border-radius: 12px !important;
+    }
+
+    div[data-baseweb="select"] {
+        border-radius: 12px !important;
+    }
+
+
+    /* =====================================================
+       NORMAL BUTTONS
+       ===================================================== */
+
+    .stButton > button {
+        min-height: 48px !important;
+        border-radius: 14px !important;
+        font-size: 1rem !important;
+        font-weight: 700 !important;
+        border: 1px solid #294b66 !important;
+    }
+
+    .stButton > button:hover {
+        border-color: #6c9fc8 !important;
+    }
+
+
+    /* =====================================================
+       CAMERA WIDGET CONTAINER
+       ===================================================== */
 
     div[data-testid="stCameraInput"] {
-        background: #050d17 !important;
-        border: 1px solid #24435d !important;
+        background: #081522 !important;
+        border: 1px solid #294d68 !important;
         border-radius: 22px !important;
         padding: 8px !important;
         overflow: hidden !important;
+        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.30) !important;
     }
 
 
-    /* Hide camera label */
+    /* Hide default camera label */
 
     div[data-testid="stCameraInput"] label {
         display: none !important;
     }
 
 
-    /* ======================================================
-       CAMERA BUTTON
-       ====================================================== */
+    /* =====================================================
+       CAMERA PREVIEW
+       ===================================================== */
 
-    div[data-testid="stCameraInput"] button {
-        width: 76px !important;
-        height: 76px !important;
+    div[data-testid="stCameraInput"] video {
+        width: 100% !important;
+        max-width: 100% !important;
+        border-radius: 16px !important;
+        object-fit: cover !important;
+    }
 
-        min-width: 76px !important;
-        min-height: 76px !important;
+
+    /* =====================================================
+       CAMERA CAPTURE BUTTON
+       
+       We intentionally DON'T style every button inside
+       the camera widget.
+       
+       This prevents the camera-switch button from becoming
+       a giant button.
+       ===================================================== */
+
+    div[data-testid="stCameraInput"]
+    button[aria-label="Take a picture"] {
+
+        width: 72px !important;
+        height: 72px !important;
+
+        min-width: 72px !important;
+        min-height: 72px !important;
 
         border-radius: 50% !important;
 
         background: #ffffff !important;
 
-        border: 6px solid #c8d0d8 !important;
+        border: 5px solid #cbd5df !important;
 
         box-shadow:
-            0 0 0 3px rgba(255,255,255,0.15),
-            0 8px 25px rgba(0,0,0,0.5) !important;
-
-        padding: 0 !important;
-
-        font-size: 0 !important;
+            0 0 0 3px rgba(255,255,255,0.12),
+            0 8px 22px rgba(0,0,0,0.45) !important;
 
         margin: 14px auto !important;
 
-        display: flex !important;
+        padding: 0 !important;
 
-        align-items: center !important;
+        position: relative !important;
 
-        justify-content: center !important;
+        color: transparent !important;
     }
 
 
     /* Camera icon */
 
-    div[data-testid="stCameraInput"] button::after {
+    div[data-testid="stCameraInput"]
+    button[aria-label="Take a picture"]::after {
+
         content: "📷";
 
-        font-size: 30px !important;
+        position: absolute !important;
+
+        left: 50% !important;
+        top: 50% !important;
+
+        transform: translate(-50%, -50%) !important;
+
+        font-size: 28px !important;
 
         line-height: 1 !important;
-
-        position: absolute;
-
-        left: 50%;
-        top: 50%;
-
-        transform: translate(-50%, -50%);
     }
 
 
-    /* Button hover */
+    /* Capture hover */
 
-    div[data-testid="stCameraInput"] button:hover {
-        background: #f5f7f9 !important;
+    div[data-testid="stCameraInput"]
+    button[aria-label="Take a picture"]:hover {
+
+        background: #f7f9fb !important;
+
         border-color: #ffffff !important;
     }
 
 
-    /* Button press */
+    /* Capture press */
 
-    div[data-testid="stCameraInput"] button:active {
-        transform: scale(0.92);
+    div[data-testid="stCameraInput"]
+    button[aria-label="Take a picture"]:active {
+
+        transform: scale(0.94) !important;
     }
 
 
-    /* ======================================================
-       INPUTS
-       ====================================================== */
+    /* =====================================================
+       SWITCH CAMERA BUTTON
+       ===================================================== */
 
-    input {
-        border-radius: 12px !important;
-    }
+    div[data-testid="stCameraInput"]
+    button[aria-label="Switch camera"] {
 
+        width: 46px !important;
+        height: 46px !important;
 
-    /* ======================================================
-       BUTTONS
-       ====================================================== */
-
-    .stButton > button {
-        border-radius: 12px !important;
+        min-width: 46px !important;
         min-height: 46px !important;
-        font-weight: 600 !important;
+
+        border-radius: 50% !important;
+
+        background: rgba(8, 17, 29, 0.82) !important;
+
+        border: 1px solid rgba(255,255,255,0.35) !important;
+
+        color: white !important;
+
+        margin: 8px !important;
+
+        padding: 0 !important;
+
+        box-shadow:
+            0 5px 15px rgba(0,0,0,0.40) !important;
     }
 
 
-    /* ======================================================
-       RESULT CARD
-       ====================================================== */
+    div[data-testid="stCameraInput"]
+    button[aria-label="Switch camera"]:hover {
 
-    .result-box {
-        background-color: #0d1b2a;
-        border: 1px solid #294963;
-        border-radius: 20px;
-        padding: 25px;
-        text-align: center;
-        margin-top: 10px;
-        margin-bottom: 15px;
+        background: rgba(24, 42, 60, 0.95) !important;
+
+        border-color: rgba(255,255,255,0.70) !important;
     }
 
 
-    /* ======================================================
-       DISCLAIMER
-       ====================================================== */
+    /* =====================================================
+       ALERTS / INFO
+       ===================================================== */
 
-    .warning-box {
-        background-color: #241d0b;
-        border: 1px solid #67511c;
-        border-radius: 14px;
+    div[data-testid="stAlert"] {
+        border-radius: 14px !important;
+    }
+
+
+    /* =====================================================
+       METRIC CARDS
+       ===================================================== */
+
+    div[data-testid="stMetric"] {
+        background: #0c1b2a;
+        border: 1px solid #294b66;
+        border-radius: 16px;
         padding: 15px;
-        color: #eadca8;
-        margin-top: 20px;
     }
 
 
-    /* ======================================================
+    /* =====================================================
        MOBILE
-       ====================================================== */
+       ===================================================== */
 
     @media (max-width: 600px) {
 
         .block-container {
             padding-left: 0.7rem;
             padding-right: 0.7rem;
+            padding-top: 0.7rem;
+        }
+
+        h1 {
+            font-size: 1.85rem !important;
+        }
+
+        h2 {
+            font-size: 1.45rem !important;
         }
 
         div[data-testid="stCameraInput"] {
             border-radius: 18px !important;
+            padding: 6px !important;
         }
 
+        div[data-testid="stCameraInput"]
+        button[aria-label="Take a picture"] {
+
+            width: 68px !important;
+            height: 68px !important;
+
+            min-width: 68px !important;
+            min-height: 68px !important;
+        }
+
+        div[data-testid="stCameraInput"]
+        button[aria-label="Switch camera"] {
+
+            width: 44px !important;
+            height: 44px !important;
+
+            min-width: 44px !important;
+            min-height: 44px !important;
+        }
     }
 
     </style>
@@ -238,9 +364,9 @@ st.markdown(
 )
 
 
-# ============================================================
-# STORAGE
-# ============================================================
+# =========================================================
+# LOAD HISTORY
+# =========================================================
 
 def load_history():
 
@@ -260,6 +386,10 @@ def load_history():
         return []
 
 
+# =========================================================
+# SAVE HISTORY
+# =========================================================
+
 def save_history(history):
 
     HISTORY_FILE.write_text(
@@ -272,9 +402,9 @@ def save_history(history):
     )
 
 
-# ============================================================
-# GPS
-# ============================================================
+# =========================================================
+# GET GPS
+# =========================================================
 
 def get_location():
 
@@ -313,9 +443,9 @@ def get_location():
         return None
 
 
-# ============================================================
-# RESET
-# ============================================================
+# =========================================================
+# RESET TEST
+# =========================================================
 
 def reset_test():
 
@@ -328,20 +458,22 @@ def reset_test():
 
     for key in keys:
 
-        if key in st.session_state:
-            del st.session_state[key]
+        st.session_state.pop(
+            key,
+            None
+        )
 
 
-# ============================================================
-# LOAD HISTORY
-# ============================================================
+# =========================================================
+# INITIAL DATA
+# =========================================================
 
 history = load_history()
 
 
-# ============================================================
+# =========================================================
 # HEADER
-# ============================================================
+# =========================================================
 
 st.title("🧪 FieldTest Companion")
 
@@ -352,38 +484,42 @@ st.caption(
 st.divider()
 
 
-# ============================================================
+# =========================================================
 # TABS
-# ============================================================
+# =========================================================
 
 tab_new, tab_history, tab_about = st.tabs(
     [
         "📷 New Test",
         "🗂 History",
-        "ℹ️ About"
+        "ℹ️ About",
     ]
 )
 
 
-# ============================================================
+# =========================================================
 # NEW TEST
-# ============================================================
+# =========================================================
 
 with tab_new:
 
-    # --------------------------------------------------------
-    # TEST INFORMATION
-    # --------------------------------------------------------
+    # =====================================================
+    # STEP 1
+    # =====================================================
 
     st.header("1. Test information")
 
-    col1, col2 = st.columns(2)
+    col1, col2 = st.columns(
+        2,
+        gap="medium"
+    )
 
     with col1:
 
         operator_id = st.text_input(
             "Operator ID",
-            value="OP-001"
+            value="OP-001",
+            key="operator_id"
         )
 
     with col2:
@@ -392,88 +528,109 @@ with tab_new:
             "Test kit",
             [
                 "Demo Colorimetric Kit"
-            ]
+            ],
+            key="kit_profile"
         )
 
 
-    # --------------------------------------------------------
-    # CAMERA
-    # --------------------------------------------------------
+    # =====================================================
+    # STEP 2
+    # =====================================================
 
     st.header("2. Capture the test")
 
     st.info(
-        "📋 Place the reference colour card on the "
+        "📋 Position the reference colour card on the "
         "LEFT and the test strip on the RIGHT. "
         "Keep both completely visible and avoid glare."
     )
 
     st.caption(
-        "📷 Tap the camera button below to capture the test."
+        "📷 Use the camera below to capture both "
+        "the reference card and test strip."
     )
 
 
-    # ========================================================
-    # CAMERA INPUT
-    # ========================================================
+    # =====================================================
+    # CAMERA
+    #
+    # IMPORTANT:
+    # No 'resolution' argument.
+    # =====================================================
 
     photo = st.camera_input(
-        "Camera",
-        key="field_camera"
+        "Field test camera",
+        key="field_camera",
+        label_visibility="collapsed",
     )
 
 
-    # ========================================================
+    # =====================================================
     # GPS
-    # ========================================================
+    # =====================================================
 
     location = get_location()
 
-
-    # Only show a small status if GPS was successfully obtained.
-
     if location:
 
-        st.caption(
+        st.success(
             "📍 GPS location captured"
         )
 
+    else:
 
-    # ========================================================
-    # AFTER PHOTO
-    # ========================================================
+        st.caption(
+            "📍 GPS location is unavailable. "
+            "Allow browser location permission "
+            "if GPS recording is required."
+        )
+
+
+    # =====================================================
+    # IMAGE CAPTURED
+    # =====================================================
 
     if photo:
 
+        image_bytes = photo.getvalue()
+
         st.session_state[
             "capture_bytes"
-        ] = photo.getvalue()
+        ] = image_bytes
 
 
         st.image(
-            st.session_state[
-                "capture_bytes"
-            ],
+            image_bytes,
             caption="Captured field-test image",
             use_container_width=True
         )
 
 
-        # ----------------------------------------------------
-        # ANALYZE
-        # ----------------------------------------------------
+        # =================================================
+        # STEP 3
+        # =================================================
 
         st.header(
             "3. Computer vision analysis"
+        )
+
+        st.caption(
+            "The captured image is processed using "
+            "the colour calibration and classification engine."
         )
 
 
         analyze_clicked = st.button(
             "🔬 Analyze Test",
             type="primary",
-            use_container_width=True
+            use_container_width=True,
+            key="analyze_test",
         )
 
+
+        # =================================================
+        # ANALYSIS
+        # =================================================
 
         if analyze_clicked:
 
@@ -483,25 +640,18 @@ with tab_new:
 
                 try:
 
-                    # ----------------------------------------
-                    # RUN CV
-                    # ----------------------------------------
-
                     result = analyze_image(
-                        st.session_state[
-                            "capture_bytes"
-                        ]
+                        image_bytes
                     )
-
 
                     st.session_state[
                         "analysis"
                     ] = result
 
 
-                    # ----------------------------------------
+                    # -------------------------------------
                     # TEST ID
-                    # ----------------------------------------
+                    # -------------------------------------
 
                     now = datetime.now()
 
@@ -513,26 +663,23 @@ with tab_new:
                     )
 
 
-                    # ----------------------------------------
+                    # -------------------------------------
                     # SAVE IMAGE
-                    # ----------------------------------------
+                    # -------------------------------------
 
                     image_path = (
                         IMAGE_DIR
                         / f"{test_id}.jpg"
                     )
 
-
                     image_path.write_bytes(
-                        st.session_state[
-                            "capture_bytes"
-                        ]
+                        image_bytes
                     )
 
 
-                    # ----------------------------------------
-                    # RECORD
-                    # ----------------------------------------
+                    # -------------------------------------
+                    # CREATE RECORD
+                    # -------------------------------------
 
                     record = {
 
@@ -540,8 +687,10 @@ with tab_new:
                             test_id,
 
                         "operator_id":
-                            operator_id.strip()
-                            or "OP-001",
+                            (
+                                operator_id.strip()
+                                or "OP-001"
+                            ),
 
                         "kit_profile":
                             kit_profile,
@@ -623,9 +772,9 @@ with tab_new:
                     }
 
 
-                    # ----------------------------------------
-                    # SAVE
-                    # ----------------------------------------
+                    # -------------------------------------
+                    # SAVE RECORD
+                    # -------------------------------------
 
                     history.insert(
                         0,
@@ -635,7 +784,6 @@ with tab_new:
                     save_history(
                         history
                     )
-
 
                     st.session_state[
                         "last_record"
@@ -654,9 +802,9 @@ with tab_new:
                     )
 
 
-    # ========================================================
+    # =====================================================
     # RESULT
-    # ========================================================
+    # =====================================================
 
     if "analysis" in st.session_state:
 
@@ -676,55 +824,61 @@ with tab_new:
         )
 
 
-        classification = result[
-            "classification"
-        ]
+        # =================================================
+        # CLASSIFICATION
+        # =================================================
 
+        classification = (
+            result["classification"]
+        )
 
-        # ----------------------------------------------------
-        # RESULT
-        # ----------------------------------------------------
 
         if classification == "POSITIVE":
 
             st.error(
-                f"🔴 {classification}"
+                "🔴 POSITIVE"
             )
 
         elif classification == "NEGATIVE":
 
             st.success(
-                f"🟢 {classification}"
+                "🟢 NEGATIVE"
             )
 
         else:
 
             st.warning(
-                f"🟡 {classification}"
+                "🟡 INCONCLUSIVE"
             )
 
 
-        # ----------------------------------------------------
+        # =================================================
         # CONFIDENCE
-        # ----------------------------------------------------
+        # =================================================
+
+        confidence = float(
+            result["confidence"]
+        )
 
         st.metric(
             "Confidence",
-            f'{result["confidence"]:.1f}%'
+            f"{confidence:.1f}%"
         )
 
-
         st.progress(
-            min(
-                result["confidence"] / 100,
-                1.0
+            max(
+                0.0,
+                min(
+                    confidence / 100.0,
+                    1.0
+                )
             )
         )
 
 
-        # ----------------------------------------------------
-        # ANALYSIS METRICS
-        # ----------------------------------------------------
+        # =================================================
+        # CV METRICS
+        # =================================================
 
         col1, col2 = st.columns(2)
 
@@ -732,20 +886,24 @@ with tab_new:
 
             st.metric(
                 "Calibration",
-                result["calibration"]
+                str(
+                    result[
+                        "calibration"
+                    ]
+                )
             )
 
         with col2:
 
             st.metric(
                 "Colour distance",
-                f'{result["distance"]:.1f}'
+                f'{float(result["distance"]):.1f}'
             )
 
 
-        # ----------------------------------------------------
-        # DETAILS
-        # ----------------------------------------------------
+        # =================================================
+        # CV DETAILS
+        # =================================================
 
         with st.expander(
             "🔬 View CV analysis details"
@@ -757,12 +915,16 @@ with tab_new:
 
             st.write(
                 "Reference RGB:",
-                result["reference_rgb"]
+                result[
+                    "reference_rgb"
+                ]
             )
 
             st.write(
                 "Raw test RGB:",
-                result["test_rgb_raw"]
+                result[
+                    "test_rgb_raw"
+                ]
             )
 
             st.write(
@@ -773,9 +935,9 @@ with tab_new:
             )
 
 
-        # ====================================================
+        # =================================================
         # DIGITAL RECORD
-        # ====================================================
+        # =================================================
 
         if record:
 
@@ -784,29 +946,64 @@ with tab_new:
             )
 
 
-            st.write(
-                f'**Test ID:** {record["test_id"]}'
-            )
+            col1, col2 = st.columns(2)
+
+            with col1:
+
+                st.write(
+                    "**Test ID**"
+                )
+
+                st.code(
+                    record[
+                        "test_id"
+                    ],
+                    language=None
+                )
+
+
+            with col2:
+
+                st.write(
+                    "**Operator**"
+                )
+
+                st.code(
+                    record[
+                        "operator_id"
+                    ],
+                    language=None
+                )
+
 
             st.write(
-                f'**Operator:** {record["operator_id"]}'
-            )
-
-            st.write(
-                f'**Time:** {record["timestamp_display"]}'
+                f'**Time:** '
+                f'{record["timestamp_display"]}'
             )
 
 
-            if (
-                record["latitude"]
-                is not None
-            ):
+            # =================================================
+            # GPS
+            # =================================================
+
+            if record[
+                "latitude"
+            ] is not None:
 
                 st.write(
                     f'**GPS:** '
                     f'{record["latitude"]:.6f}, '
                     f'{record["longitude"]:.6f}'
                 )
+
+                if record[
+                    "gps_accuracy"
+                ] is not None:
+
+                    st.caption(
+                        "GPS accuracy: "
+                        f'{float(record["gps_accuracy"]):.1f} m'
+                    )
 
             else:
 
@@ -824,29 +1021,35 @@ with tab_new:
             )
 
 
-            if st.button(
+            generate_pdf = st.button(
                 "📄 Generate PDF Report",
-                use_container_width=True
-            ):
+                use_container_width=True,
+                key="generate_current_pdf",
+            )
+
+
+            if generate_pdf:
 
                 try:
 
-                    pdf_path = create_pdf_report(
-
-                        record=record,
-
-                        image_path=(
-                            APP_DIR
-                            / record[
-                                "image_path"
-                            ]
+                    pdf_path = (
+                        create_pdf_report(
+                            record=record,
+                            image_path=(
+                                APP_DIR
+                                / record[
+                                    "image_path"
+                                ]
+                            )
                         )
                     )
 
 
                     st.session_state[
                         "pdf_path"
-                    ] = str(pdf_path)
+                    ] = str(
+                        pdf_path
+                    )
 
 
                     st.success(
@@ -861,56 +1064,60 @@ with tab_new:
                     )
 
 
-            # -------------------------------------------------
-            # DOWNLOAD
-            # -------------------------------------------------
+            # =================================================
+            # DOWNLOAD PDF
+            # =================================================
 
-            pdf_path = st.session_state.get(
-                "pdf_path"
+            pdf_path = (
+                st.session_state.get(
+                    "pdf_path"
+                )
             )
 
 
             if (
                 pdf_path
-                and Path(pdf_path).exists()
+                and Path(
+                    pdf_path
+                ).exists()
             ):
 
-                pdf_bytes = Path(
-                    pdf_path
-                ).read_bytes()
+                pdf_bytes = (
+                    Path(
+                        pdf_path
+                    ).read_bytes()
+                )
 
 
                 st.download_button(
-
                     label="⬇️ Save PDF",
-
                     data=pdf_bytes,
-
                     file_name=(
                         f'{record["test_id"]}'
-                        '_report.pdf'
+                        "_report.pdf"
                     ),
-
                     mime="application/pdf",
-
-                    use_container_width=True
+                    use_container_width=True,
+                    key="save_current_pdf",
                 )
 
 
                 st.info(
-                    "📤 After saving the PDF on your phone, "
-                    "open it and use the phone's Share option "
-                    "to send it through WhatsApp, Gmail, Drive, etc."
+                    "📤 After saving the PDF, "
+                    "use your phone's Share option "
+                    "to send it through WhatsApp, "
+                    "Gmail, Drive, or another app."
                 )
 
 
-            # -------------------------------------------------
+            # =================================================
             # NEW TEST
-            # -------------------------------------------------
+            # =================================================
 
             if st.button(
                 "➕ Start New Test",
-                use_container_width=True
+                use_container_width=True,
+                key="new_test",
             ):
 
                 reset_test()
@@ -918,9 +1125,9 @@ with tab_new:
                 st.rerun()
 
 
-    # ========================================================
+    # =====================================================
     # DISCLAIMER
-    # ========================================================
+    # =====================================================
 
     st.warning(
         "⚠️ Presumptive field-test result only. "
@@ -929,9 +1136,9 @@ with tab_new:
     )
 
 
-# ============================================================
-# HISTORY
-# ============================================================
+# =========================================================
+# HISTORY TAB
+# =========================================================
 
 with tab_history:
 
@@ -946,21 +1153,20 @@ with tab_history:
             "No tests have been recorded yet."
         )
 
-    else:
 
-        # ----------------------------------------------------
-        # SEARCH
-        # ----------------------------------------------------
+    else:
 
         search = st.text_input(
             "Search tests",
             placeholder=(
                 "Test ID, operator or result"
-            )
+            ),
+            key="history_search",
         ).strip().lower()
 
 
         filtered = []
+
 
         for record in history:
 
@@ -970,36 +1176,36 @@ with tab_history:
                     record
                 )
 
-                continue
+            else:
+
+                if (
+                    search
+                    in record[
+                        "test_id"
+                    ].lower()
+                    or
+                    search
+                    in record[
+                        "operator_id"
+                    ].lower()
+                    or
+                    search
+                    in record[
+                        "classification"
+                    ].lower()
+                ):
+
+                    filtered.append(
+                        record
+                    )
 
 
-            if (
-                search
-                in record[
-                    "test_id"
-                ].lower()
-
-                or search
-                in record[
-                    "operator_id"
-                ].lower()
-
-                or search
-                in record[
-                    "classification"
-                ].lower()
-            ):
-
-                filtered.append(
-                    record
-                )
-
-
-        # ----------------------------------------------------
-        # METRICS
-        # ----------------------------------------------------
+        # =================================================
+        # STATISTICS
+        # =================================================
 
         c1, c2, c3 = st.columns(3)
+
 
         with c1:
 
@@ -1007,6 +1213,7 @@ with tab_history:
                 "Total",
                 len(history)
             )
+
 
         with c2:
 
@@ -1016,10 +1223,10 @@ with tab_history:
                     r[
                         "classification"
                     ] == "POSITIVE"
-
                     for r in history
                 )
             )
+
 
         with c3:
 
@@ -1029,15 +1236,14 @@ with tab_history:
                     r[
                         "classification"
                     ] != "POSITIVE"
-
                     for r in history
                 )
             )
 
 
-        # ----------------------------------------------------
-        # RECORDS
-        # ----------------------------------------------------
+        # =================================================
+        # HISTORY RECORDS
+        # =================================================
 
         for record in filtered:
 
@@ -1064,14 +1270,13 @@ with tab_history:
 
                 st.write(
                     f'**Confidence:** '
-                    f'{record["confidence"]:.1f}%'
+                    f'{float(record["confidence"]):.1f}%'
                 )
 
 
-                if (
-                    record["latitude"]
-                    is not None
-                ):
+                if record[
+                    "latitude"
+                ] is not None:
 
                     st.write(
                         f'**GPS:** '
@@ -1096,56 +1301,44 @@ with tab_history:
                     )
 
 
-                # ------------------------------------------------
-                # GENERATE HISTORY PDF
-                # ------------------------------------------------
-
                 if st.button(
-
                     "📄 Generate PDF",
-
                     key=(
-                        "generate_"
+                        "history_pdf_"
                         + record[
                             "test_id"
                         ]
                     ),
-
-                    use_container_width=True
-
+                    use_container_width=True,
                 ):
 
                     try:
 
-                        pdf = create_pdf_report(
-
-                            record,
-
-                            image_file
+                        pdf = (
+                            create_pdf_report(
+                                record,
+                                image_file
+                            )
                         )
 
 
                         st.download_button(
-
                             "⬇️ Download PDF",
-
-                            data=pdf.read_bytes(),
-
+                            data=(
+                                pdf.read_bytes()
+                            ),
                             file_name=(
                                 f'{record["test_id"]}'
-                                '_report.pdf'
+                                "_report.pdf"
                             ),
-
                             mime="application/pdf",
-
                             key=(
-                                "download_"
+                                "download_pdf_"
                                 + record[
                                     "test_id"
                                 ]
                             ),
-
-                            use_container_width=True
+                            use_container_width=True,
                         )
 
 
@@ -1156,9 +1349,9 @@ with tab_history:
                         )
 
 
-# ============================================================
-# ABOUT
-# ============================================================
+# =========================================================
+# ABOUT TAB
+# =========================================================
 
 with tab_about:
 
@@ -1167,64 +1360,109 @@ with tab_about:
     )
 
 
+    # -----------------------------------------------------
+    # IMAGE CAPTURE
+    # -----------------------------------------------------
+
+    st.subheader(
+        "📷 Image Capture"
+    )
+
+    st.write(
+        "The application captures the existing "
+        "colorimetric field-test strip together "
+        "with a reference colour card."
+    )
+
+
+    # -----------------------------------------------------
+    # CALIBRATION
+    # -----------------------------------------------------
+
+    st.subheader(
+        "🎨 Lighting Calibration"
+    )
+
+    st.write(
+        "The reference card is used to compensate "
+        "for differences in scene brightness."
+    )
+
+
+    # -----------------------------------------------------
+    # COMPUTER VISION
+    # -----------------------------------------------------
+
+    st.subheader(
+        "🔬 Computer Vision"
+    )
+
+    st.write(
+        "The captured image is analyzed and "
+        "classified into:"
+    )
+
     st.markdown(
         """
-### 📷 Image Capture
+        - 🔴 POSITIVE
+        - 🟢 NEGATIVE
+        - 🟡 INCONCLUSIVE
+        """
+    )
 
-The application captures the existing
-colorimetric field-test strip together
-with a reference colour card.
 
-### 🎨 Lighting Calibration
+    # -----------------------------------------------------
+    # DIGITAL INFORMATION
+    # -----------------------------------------------------
 
-The reference card is used to compensate
-for differences in scene brightness.
+    st.subheader(
+        "📍 Digital Information"
+    )
 
-### 🔬 Computer Vision
+    st.markdown(
+        """
+        - Operator ID
+        - Timestamp
+        - GPS location
+        - Test ID
+        - Classification
+        - Confidence
+        - Captured image
+        """
+    )
 
-The captured test region is analyzed and
-classified into:
 
-- POSITIVE
-- NEGATIVE
-- INCONCLUSIVE
+    # -----------------------------------------------------
+    # PDF
+    # -----------------------------------------------------
 
-### 📍 Digital Information
+    st.subheader(
+        "📄 PDF Report"
+    )
 
-The prototype records:
+    st.write(
+        "A digital PDF report containing the "
+        "test information, image and result "
+        "can be generated."
+    )
 
-- Operator ID
-- Timestamp
-- GPS location
-- Test ID
-- Classification
-- Confidence
-- Captured image
 
-### 📄 PDF Report
+    # -----------------------------------------------------
+    # LIMITATION
+    # -----------------------------------------------------
 
-A report containing the test image and
-result information can be generated and
-saved.
+    st.subheader(
+        "⚠️ Prototype limitation"
+    )
 
-### 📤 Sharing
+    st.warning(
+        "The current colour profiles are "
+        "demonstration profiles only. They are "
+        "not validated narcotics-testing thresholds."
+    )
 
-The saved PDF can be shared using the
-phone's normal sharing system.
-
----
-
-### ⚠️ Prototype limitation
-
-The current colour profiles are
-**demonstration profiles only**.
-
-They are not validated narcotics-testing
-thresholds.
-
-The application produces a
-**presumptive field-test result** and
-does not replace laboratory confirmatory
-testing.
-"""
+    st.write(
+        "The application produces a presumptive "
+        "field-test result and does not replace "
+        "laboratory confirmatory testing."
     )
